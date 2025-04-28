@@ -12,11 +12,14 @@ import java.util.List;    // Import List
 import java.util.Scanner; // Import Scanner
 import java.util.Set;     // Import Set
 
-
-// It's good practice to give it a slightly different name
+/**
+ * Shamir's Secret Sharing (SSS) scheme (both share preparation and reconstruction) for images
+ * @author Yingzhao (Seraph) Ma
+ * @version 1.1
+ */
 public class ShamirImageSharing {
 
-    // --- Constants and Finite Field Methods (Keep exactly as before) ---
+    // Constants and Finite Field Methods (Keep exactly as before)
     private static final int K = 2; // Threshold number of shares needed
     private static final int N = 3; // Total number of shares generated
     private static final int PRIME = 257; // Prime modulus for GF(257)
@@ -43,24 +46,24 @@ public class ShamirImageSharing {
     private static int evaluatePolynomial(int secret, int coeff, int x) {
         return modAdd(secret, modMul(coeff, x));
     }
-    // --- End of unchanged methods ---
 
-
-    // --- SSS Core Logic (Keep createShares and reconstructImage exactly as before) ---
+    // SSS Core Logic
     public static void createShares(String inputImagePath, String outputPrefix) throws IOException {
-        // ... (Keep implementation from the previous answer) ...
         // 1. Read image bytes
         byte[] imageBytes = Files.readAllBytes(Paths.get(inputImagePath));
         if (imageBytes.length < HEADER_SIZE) {
             throw new IllegalArgumentException("Input file is too small to be a valid BMP with header.");
         }
+
         // 2. Separate header and data
         byte[] header = Arrays.copyOfRange(imageBytes, 0, HEADER_SIZE);
         byte[] data = Arrays.copyOfRange(imageBytes, HEADER_SIZE, imageBytes.length);
+
         // 3. Initialize share data arrays
         byte[][] shareData = new byte[N][data.length];
         int[] shareXValues = new int[N];
         for (int i = 0; i < N; i++) shareXValues[i] = i + 1;
+
         // 4. Process each data byte
         for (int i = 0; i < data.length; i++) {
             int secret = data[i] & 0xFF;
@@ -71,6 +74,7 @@ public class ShamirImageSharing {
                 shareData[j][i] = (byte) shareValueY; // Cast acknowledges potential 256->0 truncation
             }
         }
+
         // 5. Create and write share files
         for (int j = 0; j < N; j++) {
             byte[] shareFileBytes = new byte[HEADER_SIZE + data.length];
@@ -82,8 +86,14 @@ public class ShamirImageSharing {
         }
     }
 
+    /**
+     * Image reconstruction method
+     * @param sharePaths path of shares
+     * @param shareXValues values of X values of shares
+     * @param outputImagePath path of the output image
+     * @throws IOException if an I/O error occurs
+     */
     public static void reconstructImage(String[] sharePaths, int[] shareXValues, String outputImagePath) throws IOException {
-        // ... (Keep implementation from the previous answer) ...
         if (sharePaths.length < K || shareXValues.length < K) throw new IllegalArgumentException("Need at least K=" + K + " shares.");
         if (sharePaths.length != shareXValues.length) throw new IllegalArgumentException("Paths and x-values count mismatch.");
         String[] pathsToUse = Arrays.copyOfRange(sharePaths, 0, K);
@@ -91,6 +101,7 @@ public class ShamirImageSharing {
         byte[][] shareData = new byte[K][];
         byte[] header = null;
         int dataLength = -1;
+
         // 1. Read shares
         for (int i = 0; i < K; i++) {
             byte[] shareBytes = Files.readAllBytes(Paths.get(pathsToUse[i]));
@@ -104,9 +115,10 @@ public class ShamirImageSharing {
                 shareData[i] = Arrays.copyOfRange(shareBytes, HEADER_SIZE, shareBytes.length);
             }
         }
-        // 3. Init reconstructed data
+        // 2. Init reconstructed data
         byte[] reconstructedData = new byte[dataLength];
-        // 4. Process bytes
+
+        // 3. Process bytes
         for (int byteIndex = 0; byteIndex < dataLength; byteIndex++) {
             int[] currentX = new int[K];
             int[] currentY = new int[K];
@@ -114,6 +126,7 @@ public class ShamirImageSharing {
                 currentX[shareIndex] = xValuesToUse[shareIndex];
                 currentY[shareIndex] = shareData[shareIndex][byteIndex] & 0xFF;
             }
+
             // Lagrange Interpolation
             int reconstructedSecret = 0;
             for (int i = 0; i < K; i++) {
@@ -135,19 +148,23 @@ public class ShamirImageSharing {
             }
             reconstructedData[byteIndex] = (byte) reconstructedSecret;
         }
-        // 5. Create file bytes
+
+        // 4. Create file bytes
         byte[] reconstructedFileBytes = new byte[HEADER_SIZE + dataLength];
         System.arraycopy(header, 0, reconstructedFileBytes, 0, HEADER_SIZE);
         System.arraycopy(reconstructedData, 0, reconstructedFileBytes, HEADER_SIZE, dataLength);
-        // 6. Write file
+
+        // 5. Write file
         Path reconPath = Paths.get(outputImagePath);
         Files.write(reconPath, reconstructedFileBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
         // System.out.println("Reconstructed image saved to: " + reconPath); // Keep output minimal here
     }
-    // --- End of unchanged methods ---
 
-
-    // --- Interactive Main Method ---
+    /**
+     * Main entry point of the Shamir’s Secret Sharing (SSS) scheme program
+     * (both share preparation and reconstruction) for images
+     * @param args The command line arguments.
+     */
     public static void main(String[] args) {
 
         // Use try-with-resources to ensure scanner is closed automatically
@@ -155,7 +172,7 @@ public class ShamirImageSharing {
             String inputImage = "";
             Path inputPath;
 
-            // --- Get Valid Input Image Path ---
+            // Get Valid Input Image Path
             while (true) {
                 System.out.print("Enter the full path to the input BMP image file: ");
                 inputImage = scanner.nextLine().trim(); // Read and trim whitespace
@@ -179,7 +196,7 @@ public class ShamirImageSharing {
                 }
             }
 
-            // --- Get Output Share Prefix ---
+            // Get Output Share Prefix
             String sharePrefix = "";
             while (sharePrefix.isEmpty()) {
                 System.out.print("Enter a prefix for the output share files (e.g., 'share_out'): ");
@@ -190,7 +207,7 @@ public class ShamirImageSharing {
                 // You could add more validation here (e.g., check for invalid filename characters)
             }
 
-            // --- Get Output Reconstructed Image Filename ---
+            // Get Output Reconstructed Image Filename
             String reconstructedImage = "";
             while (reconstructedImage.isEmpty()) {
                 System.out.print("Enter a filename for the reconstructed image (e.g., 'reconstructed.bmp'): ");
@@ -201,7 +218,7 @@ public class ShamirImageSharing {
                 // You could add more validation here
             }
 
-            // --- Execute Share Creation ---
+            // Execute Share Creation
             try {
                 System.out.println("\n--- Creating Shares ---");
                 createShares(inputImage, sharePrefix); // Use user-provided input
@@ -216,7 +233,7 @@ public class ShamirImageSharing {
                 return; // Exit if share creation fails
             }
 
-            // --- Get Shares for Reconstruction ---
+            // Get Shares for Reconstruction
             List<Integer> chosenShareIndices = new ArrayList<>();
             List<String> sharesToReconstructList = new ArrayList<>();
             System.out.printf("\n--- Reconstruction Setup (Need %d shares) ---\n", K);
@@ -290,7 +307,7 @@ public class ShamirImageSharing {
             String[] sharesToReconstruct = sharesToReconstructList.toArray(new String[0]);
             int[] shareXValuesForRecon = chosenShareIndices.stream().mapToInt(Integer::intValue).toArray();
 
-            // --- Execute Reconstruction ---
+            // Execute Reconstruction
             try {
                 System.out.println("\n--- Reconstructing Image ---");
                 System.out.println("Using shares: " + Arrays.toString(sharesToReconstruct));
