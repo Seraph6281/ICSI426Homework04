@@ -1,4 +1,4 @@
-## **A Guide to Run Programs**
+## **A Guide to Run the Programs**
 ICSI 426 Homework 4 Yingzhao (Seraph) Ma
 
 This guide provides instructions to run the programs that are required for Homework 4.
@@ -16,14 +16,15 @@ This repository is also available on [GitHub](https://github.com/Seraph6281/ICSI
 |   Problem 1: SSS Scheme for Images    |     _ShamirImageSharing.java_     |
 | Problem 2: SSS with Image Downscaling | _ShamirHomomorphicDownscale.java_ |
 
-**Note:** For validation purpose, problem 1 and 2 are implemented separately and into 2 completely independent programs.
-
+**Note:** 
+1. For validation purpose, Problem 1 and 2 are implemented separately and into 2 completely independent programs.
+2. For result validation and separation purpose, the result of the SSS Scheme for Images program is saved in the project folder by default, while the result of the SSS with Image Downscaling program is saved in the _homomorphic_output_ folder by default.
 #### Test Files
 
-|    File Number     |                           Description                            |
-|:------------------:|:----------------------------------------------------------------:|
-|    _snail.bmp_     |                  $256\times256$ BMP test image                   |
-|    _land2.bmp_     |                      another BMP test image                      |
+|    File Number     |        Description         |
+|:------------------:|:--------------------------:|
+|    _snail.bmp_     | $256 * 256$ BMP test image |
+|    _land2.bmp_     |   another BMP test image   |
 
 ---
 

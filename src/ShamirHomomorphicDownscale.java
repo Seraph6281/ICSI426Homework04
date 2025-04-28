@@ -472,8 +472,8 @@ public class ShamirHomomorphicDownscale {
             System.out.printf("\nInput Image: %s (%d x %d)\n", inputImage, width, height);
             System.out.println("Output will be placed in: " + tempDir + "/");
 
-            // Step 1: Downscale Original Image
-            System.out.println("\n--- Step 1: Taking an original image I of certain resolution and downscaling I -> I_o ---");
+            // Step 1: Take input and downscale Original Image
+            System.out.println("\n--- Step 1: Downscaling original image I -> I_o ---");
             downscaleImage(inputImage, originalDownscaled);
             System.out.println("Result saved as: " + originalDownscaled);
 
@@ -501,22 +501,22 @@ public class ShamirHomomorphicDownscale {
             reconstructImage(sharesToRecon, xValsRecon, reconstructedDownscaled);
             System.out.println("Reconstructed downscaled image saved as: " + reconstructedDownscaled);
 
-            // Step 5: Compute MAE (Sum Absolute Error)
+            // Step 5: Compute MAE (Mean Absolute Error)
             System.out.println("\n--- Step 5: Calculating Sum Absolute Error between I_o and I_s ---");
             long sae = calculateSAE(originalDownscaled, reconstructedDownscaled);
             System.out.println("Sum Absolute Error (SAE) = " + sae);
 
             if (sae == 0) {
                 System.out.println("The Sum Absolute Error is 0.");
-                System.out.println("This indicates perfect reconstruction *despite* the different averaging methods.");
-                System.out.println("This outcome suggests that for this specific image and operation, the differences between integer division and finite field averaging, combined with any potential SSS clamping/truncation effects, cancelled out or did not occur in a way that affected the final byte values.");
-                System.out.println("The additive homomorphic property of SSS holds perfectly under these conditions for the downscaling operation.");
+//                System.out.println("This indicates perfect reconstruction *despite* the different averaging methods.");
+//                System.out.println("This outcome suggests that for this specific image and operation, the differences between integer division and finite field averaging, combined with any potential SSS clamping/truncation effects, cancelled out or did not occur in a way that affected the final byte values.");
+//                System.out.println("The additive homomorphic property of SSS holds perfectly under these conditions for the downscaling operation.");
             } else {
                 int w_o = readIntLE(Files.readAllBytes(Paths.get(originalDownscaled)), 18);
                 int h_o = readIntLE(Files.readAllBytes(Paths.get(originalDownscaled)), 22);
                 long numBytes = (long)w_o * h_o * 3; // Approx number of data bytes (ignoring padding)
                 double mae_per_byte = (double) sae / numBytes;
-                System.out.printf("The Mean Absolute Error per byte (MAE) approx is %.4f).\n", mae_per_byte);
+                System.out.printf("The Mean Absolute Error per byte (MAE) approx is %.4f.\n", mae_per_byte);
 
                 // System.out.println("A non-zero SAE is expected due to several factors:");
                 // System.out.println("  1. Different Averaging: Integer division in Step 1 (I->I_o) truncates differently than finite field multiplication by inv(4) in Step 3 (I_k->I_sk).");
