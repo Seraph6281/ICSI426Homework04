@@ -13,7 +13,7 @@ import java.util.Scanner; // Import Scanner
 import java.util.Set;     // Import Set
 
 /**
- * Shamir's Secret Sharing (SSS) scheme (both share preparation and reconstruction) for images
+ * Shamir's Secret Sharing (SSS) scheme for image file splitting and reconstruction.
  * @author Yingzhao (Seraph) Ma
  * @version 1.1
  */
@@ -47,7 +47,14 @@ public class ShamirImageSharing {
         return modAdd(secret, modMul(coeff, x));
     }
 
-    // SSS Core Logic
+    /**
+     * Generates multiple image shares based on Shamir's Secret Sharing scheme and writes them as separate files.
+     * Each generated share contains both the header and the encoded share data derived from the original image.
+     *
+     * @param inputImagePath the path to the input BMP image file to be shared
+     * @param outputPrefix   the prefix for the output share files, which will be suffixed with share indices
+     * @throws IOException if an error occurs while reading the input file or writing the share files
+     */
     public static void createShares(String inputImagePath, String outputPrefix) throws IOException {
         // 1. Read image bytes
         byte[] imageBytes = Files.readAllBytes(Paths.get(inputImagePath));
@@ -87,11 +94,15 @@ public class ShamirImageSharing {
     }
 
     /**
-     * Image reconstruction method
-     * @param sharePaths path of shares
-     * @param shareXValues values of X values of shares
-     * @param outputImagePath path of the output image
-     * @throws IOException if an I/O error occurs
+     * Reconstructs an image from a set of shares using Shamir's Secret Sharing scheme.
+     * Reads the shares and associated x-values, performs Lagrange interpolation to
+     * reconstruct the data, and writes the reconstructed image to the specified output path.
+     *
+     * @param sharePaths an array of file paths to the share files required for reconstruction
+     * @param shareXValues an array of x-values corresponding to each share in the same order
+     * @param outputImagePath the path to save the reconstructed BMP image file
+     * @throws IOException if an error occurs while reading the share files or writing the reconstructed image
+     * @throws IllegalArgumentException if the number of shares or x-values is insufficient or mismatched, or the data is inconsistent
      */
     public static void reconstructImage(String[] sharePaths, int[] shareXValues, String outputImagePath) throws IOException {
         if (sharePaths.length < K || shareXValues.length < K) throw new IllegalArgumentException("Need at least K=" + K + " shares.");
@@ -161,9 +172,12 @@ public class ShamirImageSharing {
     }
 
     /**
-     * Main entry point of the Shamir’s Secret Sharing (SSS) scheme program
-     * (both share preparation and reconstruction) for images
-     * @param args The command line arguments.
+     * The entry point for the Shamir Image Sharing program.
+     *
+     * It validates the user inputs, creates the image shares using Shamir's secret sharing scheme,
+     * and reconstructs the image using a specified subset of shares provided by the user.
+     *
+     * @param args command-line arguments (not used in this implementation)
      */
     public static void main(String[] args) {
 

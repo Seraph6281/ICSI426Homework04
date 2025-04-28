@@ -15,7 +15,10 @@ import java.util.Scanner;
 import java.util.Set;
 
 /**
- * SSS homomorphic image downscaling
+ * Shamir's Secret Sharing scheme combined with image downscaling and BMP image processing.
+ * The utility functions include finite field arithmetic operations, BMP header manipulation,
+ * image downscaling, share creation and reconstruction, and image quality analysis using Sum of Absolute Errors (SAE).
+ * The input and output images used in this class must be in the BMP format with a 24-bit color depth.
  * @author Yingzhao (Seraph) Ma
  * @version 1.1
  */
@@ -43,6 +46,19 @@ public class ShamirHomomorphicDownscale {
     }
 
     // SSS Share Creation/Reconstruction method
+
+    /**
+     * Creates shares of a given image using Shamir's Secret Sharing scheme.
+     * The input image is split into multiple shares, which can later be used
+     * to reconstruct the original image. Each share is saved as a separate BMP file.
+     *
+     * @param inputImagePath the file path to the input BMP image to be split into shares
+     * @param outputPrefix the prefix for naming the output share files; each share file
+     *                     will have this prefix followed by its unique identifier
+     * @throws IOException if an I/O error occurs, such as being unable to read the input file
+     *                     or write to an output file
+     * @throws IllegalArgumentException if the input image is too small to process or invalid
+     */
     public static void createShares(String inputImagePath, String outputPrefix) throws IOException { /* ... Same as before ... */
         byte[] imageBytes = Files.readAllBytes(Paths.get(inputImagePath));
         if (imageBytes.length < HEADER_SIZE) throw new IllegalArgumentException("Input too small.");
@@ -64,11 +80,16 @@ public class ShamirHomomorphicDownscale {
     }
 
     /**
-     * Image reconstruction method
-     * @param sharePaths path of shares
-     * @param shareXValues values of X values of shares
-     * @param outputImagePath path of the output image
-     * @throws IOException if an I/O error occurs
+     * Reconstructs an image from its shares using Shamir's Secret Sharing scheme.
+     * The method takes the file paths of the shares, their corresponding x-values used during
+     * the sharing process, and reconstructs the original image by combining the shares.
+     * The reconstructed image is saved to the specified output file path.
+     *
+     * @param sharePaths the array of file paths to the share files used for reconstruction
+     * @param shareXValues the array of x-values corresponding to the shares, used for interpolation
+     * @param outputImagePath the file path where the reconstructed image will be saved
+     * @throws IOException if an I/O error occurs while reading the share files or writing the output image
+     * @throws IllegalArgumentException if the input shares or arguments are invalid, such as mismatched or insufficient shares
      */
     public static void reconstructImage(String[] sharePaths, int[] shareXValues, String outputImagePath) throws IOException { /* ... Same as before ... */
         if (sharePaths.length < K || shareXValues.length < K || sharePaths.length != shareXValues.length)
@@ -119,19 +140,50 @@ public class ShamirHomomorphicDownscale {
     }
 
     // BMP Header Helpers
+
+    /**
+     * BMP Header Helper: Reads a 4-byte integer from the provided byte array starting at the specified offset,
+     * interpreting the bytes in little-endian order.
+     *
+     * @param buffer the byte array containing the data from which the integer is to be read
+     * @param offset the starting index in the byte array from which the 4-byte integer will be read
+     * @return the integer value represented by the 4 bytes in little-endian order
+     */
     private static int readIntLE(byte[] buffer, int offset) {
         return ByteBuffer.wrap(buffer, offset, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
     }
 
+    /**
+     * BMP Header Helper: Writes a 32-bit integer to the given byte array at the specified offset in little-endian order.
+     *
+     * @param buffer the byte array where the integer will be written
+     * @param offset the starting position in the byte array where the integer will be written
+     * @param value the 32-bit integer value to write to the byte array
+     */
     private static void writeIntLE(byte[] buffer, int offset, int value) {
         ByteBuffer.wrap(buffer, offset, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(value);
     }
 
+    /**
+     * BMP Header Helper: Writes a 16-bit short value to the specified position in a byte array in little-endian order.
+     *
+     * @param buffer the byte array where the short value will be written
+     * @param offset the starting position in the byte array where the short value will be written
+     * @param value the 16-bit short value to write to the byte array
+     */
     private static void writeShortLE(byte[] buffer, int offset, short value) {
         ByteBuffer.wrap(buffer, offset, 2).order(ByteOrder.LITTLE_ENDIAN).putShort(value);
     }
 
-    // Helper to write BMP file
+    /**
+     * BMP Header Helper: Writes a BMP file to the specified path by combining the provided header and data arrays.
+     * The header and data arrays are concatenated to form the complete BMP file before being written.
+     *
+     * @param path the file path where the BMP file will be written
+     * @param header the byte array containing the BMP file header
+     * @param data the byte array containing the BMP image data
+     * @throws IOException if an I/O error occurs during file writing
+     */
     private static void writeBMP(Path path, byte[] header, byte[] data) throws IOException {
         byte[] fileBytes = new byte[header.length + data.length];
         System.arraycopy(header, 0, fileBytes, 0, header.length);
@@ -139,7 +191,15 @@ public class ShamirHomomorphicDownscale {
         Files.write(path, fileBytes, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
-    // Create a new BMP header for given dimensions (assuming 24-bit)
+    /**
+     * Creates a BMP header for a 24-bit BMP image using the specified width and height.
+     * The method generates an appropriate file and DIB header based on BMP specifications,
+     * including support for padding to align rows to 4-byte boundaries.
+     *
+     * @param width the width of the BMP image in pixels
+     * @param height the height of the BMP image in pixels
+     * @return a byte array containing the BMP header, consisting of the file header and DIB header
+     */
     private static byte[] createBMPHeader(int width, int height) {
         byte[] header = new byte[HEADER_SIZE];
         int bitsPerPixel = 24;
@@ -174,10 +234,13 @@ public class ShamirHomomorphicDownscale {
     // Downscaling Functions
 
     /**
-     * Downscales a regular BMP image by factor 2 using integer averaging.
-     * @param inputPath path of input images
-     * @param outputPath path of downscaled image
-     * @throws IOException if an I/O error occurs
+     * Downscales a 24-bit BMP image by a factor of 2 using pixel averaging.
+     * The image width and height must be even, and the BMP must have a 24-bit color depth.
+     *
+     * @param inputPath the file path to the input BMP image
+     * @param outputPath the file path to save the downscaled BMP image
+     * @throws IOException if an I/O error occurs, such as issues reading or writing files
+     * @throws IllegalArgumentException if the input image does not meet the required format or dimensions
      */
     public static void downscaleImage(String inputPath, String outputPath) throws IOException {
         byte[] imageBytes = Files.readAllBytes(Paths.get(inputPath));
@@ -232,11 +295,15 @@ public class ShamirHomomorphicDownscale {
         writeBMP(Paths.get(outputPath), newHeader, newData);
     }
 
+
     /**
-     * Downscales a SHARE BMP image by factor 2 using finite field averaging.
-     * @param inputPath path of image input
-     * @param outputPath path of output downscaled images
-     * @throws IOException if an I/O error occurs
+     * Downscales a given 24-bit BMP image share by a factor of 2 using pixel averaging.
+     * The BMP image must have a 24-bit color depth and both width and height must be even.
+     *
+     * @param inputPath the file path to the input BMP share image
+     * @param outputPath the file path to save the downscaled BMP share image
+     * @throws IOException if an I/O error occurs during file read or write operations
+     * @throws IllegalArgumentException if the input share does not meet the required BMP format or dimensions
      */
     public static void downscaleShareImage(String inputPath, String outputPath) throws IOException {
         byte[] shareBytes = Files.readAllBytes(Paths.get(inputPath));
@@ -298,11 +365,17 @@ public class ShamirHomomorphicDownscale {
     }
 
     /**
-     * Step 5: Calculates the Sum of Absolute Errors (SAE) between two images, as per the formula.
+     * Calculates the Sum of Absolute Errors (SAE) between two 24-bit BMP images.
      * MAE = Sum(|I_o(j) - I_s(j)|)
-     * @param imagePath1 path of the first image
-     * @param imagePath2 path of the second image
-     * @throws IOException if an I/O error occurs
+     * The images are compared pixel-by-pixel, ignoring the header portion of the files.
+     * For valid comparison, both images must have the same dimensions.
+     *
+     * @param imagePath1 the file path to the first BMP image
+     * @param imagePath2 the file path to the second BMP image
+     * @return the total sum of absolute errors between the two images
+     * @throws IOException if an I/O error occurs, such as issues reading the image files
+     * @throws IllegalArgumentException if the images do not meet the required conditions
+     *                                  (e.g., dimensions do not match or files are too small)
      */
     public static long calculateSAE(String imagePath1, String imagePath2) throws IOException {
         byte[] bytes1 = Files.readAllBytes(Paths.get(imagePath1));
@@ -339,9 +412,13 @@ public class ShamirHomomorphicDownscale {
         return totalAbsoluteError;
     }
 
+
     /**
-     * Main entry point of the Shamir Homomorphic Downscaling
-     * @param args the command line arguments.
+     * The entry point for the program. It processes an input BMP image file,
+     * checks its validity, performs downscaling, generates image shares, reconstructs a downscaled image
+     * from shares, calculates the Sum Absolute Error, and provides results to the user.
+     *
+     * @param args Command-line arguments; not used directly in this implementation.
      */
     public static void main(String[] args) {
 
